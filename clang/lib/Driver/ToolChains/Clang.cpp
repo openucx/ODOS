@@ -8603,6 +8603,10 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   // Add the linker arguments to be forwarded by the wrapper.
   CmdArgs.push_back(Args.MakeArgString(Twine("--linker-path=") +
                                        LinkCommand->getExecutable()));
+  // FIXME: This should not be unconditional.
+  CmdArgs.push_back("--link-with-clang");
+  CmdArgs.push_back(Args.MakeArgString(Twine("--clang-path=") +
+			                           getToolChain().GetProgramPath("clang")));
   CmdArgs.push_back("--");
   for (const char *LinkArg : LinkCommand->getArguments())
     CmdArgs.push_back(LinkArg);

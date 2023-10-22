@@ -37,6 +37,7 @@ static const char *RTLNames[] = {
     /* SX-Aurora VE target  */ "libomptarget.rtl.ve",
     /* AMDGPU target        */ "libomptarget.rtl.amdgpu",
     /* Remote target        */ "libomptarget.rtl.rpc",
+    /* BlueField DPU        */ "libomptarget.rtl.bf",
 };
 
 PluginManager *PM;

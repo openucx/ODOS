@@ -432,10 +432,53 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
 
   return *TempFileOrErr;
 }
+
+Expected<StringRef> linkWithClang(ArrayRef<StringRef> InputFiles,
+                                  const ArgList &Args) {
+  llvm::TimeTraceScope TimeScope("Generic linking with clang");
+  StringRef TargetName = Args.getLastArgValue(OPT_triple_EQ);
+  const llvm::Triple Triple(TargetName);
+  StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
+
+  // Create a new file to write the linked device image to.
+  auto TempFileOrErr =
+      createOutputFile(sys::path::filename(ExecutableName) + "-" +
+                           Triple.getArchName() + "-" + Arch,
+                       "out");
+  if (!TempFileOrErr)
+    return TempFileOrErr.takeError();
+
+  // Use the host linker to perform generic offloading. Use the same libraries
+  // and paths as the host application does.
+  SmallVector<StringRef, 16> CmdArgs;
+  CmdArgs.push_back(Args.getLastArgValue(OPT_clang_path_EQ));
+  CmdArgs.push_back(Args.MakeArgString(Twine("--target=") + TargetName));
+  CmdArgs.push_back("-shared");
+
+  CmdArgs.push_back("-o");
+  CmdArgs.push_back(*TempFileOrErr);
+
+  // We ignore most of the flags because they only apply for a host
+  // linker. We expect linker_args be used for offload specific ones.
+
+  // Add extracted input files.
+  for (StringRef Input : InputFiles)
+    CmdArgs.push_back(Input);
+
+  for (StringRef Arg : Args.getAllArgValues(OPT_linker_arg_EQ))
+    CmdArgs.push_back(Args.MakeArgString(Arg));
+  if (Error Err =
+          executeCommands(Args.getLastArgValue(OPT_clang_path_EQ), CmdArgs))
+    return std::move(Err);
+
+  return *TempFileOrErr;
+}
+
 } // namespace generic
 
 Expected<StringRef> linkDevice(ArrayRef<StringRef> InputFiles,
-                               const ArgList &Args) {
+                               const ArgList &Args,
+							   bool LinkWithClang) {
   const llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
   switch (Triple.getArch()) {
   case Triple::nvptx:
@@ -447,7 +490,8 @@ Expected<StringRef> linkDevice(ArrayRef<StringRef> InputFiles,
   case Triple::aarch64_be:
   case Triple::ppc64:
   case Triple::ppc64le:
-    return generic::clang(InputFiles, Args);
+	return LinkWithClang ? generic::linkWithClang(InputFiles, Args)
+		                 : generic::clang(InputFiles, Args);
   default:
     return createStringError(inconvertibleErrorCode(),
                              Triple.getArchName() +
@@ -1051,7 +1095,8 @@ linkAndWrapDeviceFiles(SmallVectorImpl<OffloadFile> &LinkerInputFiles,
 
     // Link the remaining device files using the device linker.
     auto OutputOrErr = !Args.hasArg(OPT_embed_bitcode)
-                           ? linkDevice(InputFiles, LinkerArgs)
+                           ? linkDevice(InputFiles, LinkerArgs,
+								        Args.hasArg(OPT_link_with_clang))
                            : InputFiles.front();
     if (!OutputOrErr)
       return OutputOrErr.takeError();
