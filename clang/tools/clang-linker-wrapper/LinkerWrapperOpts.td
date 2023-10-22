@@ -13,6 +13,9 @@ def help_hidden : Flag<["--"], "help-hidden">,
 def linker_path_EQ : Joined<["--"], "linker-path=">,
   Flags<[WrapperOnlyOption]>, MetaVarName<"<path>">,
   HelpText<"The linker executable to invoke">;
+def clang_path_EQ : Joined<["--"], "clang-path=">,
+  Flags<[WrapperOnlyOption]>, MetaVarName<"<path>">,
+  HelpText<"The clang executable to invoke when linking using clang driver">;
 def cuda_path_EQ : Joined<["--"], "cuda-path=">,
   Flags<[WrapperOnlyOption]>, MetaVarName<"<dir>">,
   HelpText<"Set the system CUDA path">;
@@ -33,6 +36,8 @@ def dry_run : Flag<["--"], "dry-run">,
   HelpText<"Print program arguments without running">;
 def verbose : Flag<["--"], "wrapper-verbose">,
   Flags<[WrapperOnlyOption]>, HelpText<"Verbose output from tools">;
+def link_with_clang : Flag<["--"], "link-with-clang">,
+  Flags<[WrapperOnlyOption]>, HelpText<"Use clang to link">;
 def embed_bitcode : Flag<["--"], "embed-bitcode">,
   Flags<[WrapperOnlyOption]>, HelpText<"Embed linked bitcode in the module">;
 def debug : Flag<["--"], "device-debug">, Flags<[WrapperOnlyOption]>, 

@@ -27,6 +27,7 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/TargetParser.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <system_error>
@@ -1972,10 +1973,20 @@ Generic_GCC::GCCVersion Generic_GCC::GCCVersion::Parse(StringRef VersionText) {
 }
 
 static llvm::StringRef getGCCToolchainDir(const ArgList &Args,
-                                          llvm::StringRef SysRoot) {
+                                          llvm::StringRef SysRoot,
+                                          const llvm::Triple &TargetTriple) {
   const Arg *A = Args.getLastArg(clang::driver::options::OPT_gcc_toolchain);
   if (A)
     return A->getValue();
+
+  if (TargetTriple.getArch() == llvm::Triple::aarch64) {
+    // We use ::getenv because this function returns a llvm::StringRef.
+    // llvm::sys::Process::GetEnv would return a temporary string instead.
+    if (auto BlueFieldGCCToolchain =
+            ::getenv("BLUEFIELD_GCC_TOOLCHAIN")) {
+      return BlueFieldGCCToolchain;
+    }
+  }
 
   // If we have a SysRoot, ignore GCC_INSTALL_PREFIX.
   // GCC_INSTALL_PREFIX specifies the gcc installation for the default
@@ -2034,7 +2045,7 @@ void Generic_GCC::GCCInstallationDetector::init(
 
   // Compute the set of prefixes for our search.
   SmallVector<std::string, 8> Prefixes;
-  StringRef GCCToolchainDir = getGCCToolchainDir(Args, D.SysRoot);
+  StringRef GCCToolchainDir = getGCCToolchainDir(Args, D.SysRoot, TargetTriple);
   if (GCCToolchainDir != "") {
     if (GCCToolchainDir.back() == '/')
       GCCToolchainDir = GCCToolchainDir.drop_back(); // remove the /

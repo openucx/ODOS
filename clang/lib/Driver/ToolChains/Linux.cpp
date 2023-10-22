@@ -21,6 +21,7 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <system_error>
@@ -345,6 +346,11 @@ Tool *Linux::buildAssembler() const {
 std::string Linux::computeSysRoot() const {
   if (!getDriver().SysRoot.empty())
     return getDriver().SysRoot;
+
+  if (getTriple().getArch() == llvm::Triple::aarch64) {
+    if (auto BlueFieldSysroot = llvm::sys::Process::GetEnv("BLUEFIELD_SYSROOT"))
+      return *BlueFieldSysroot;
+  }
 
   if (getTriple().isAndroid()) {
     // Android toolchains typically include a sysroot at ../sysroot relative to
