@@ -122,12 +122,7 @@ struct bf_conn {
 struct bf_lib {
 	void *img;
 	size_t imglen;
-#if 0
-	__tgt_offload_entry *entries_table;
-	size_t total_entries;
 
-	__tgt_target_table target_table[1];
-#endif
 	void *hndl;
 	char filename[128];
 };
@@ -146,7 +141,6 @@ static int total_devices;
 static struct bf_dev *dev_list;
 static struct doca_devinfo **doca_dev_list;
 
-//static int active_devices;
 
 int bf_send_buf(struct bf_conn *conn, void *buf, size_t sz);
 int bf_recv_buf(struct bf_conn *conn, void *buf, size_t sz);
@@ -233,7 +227,6 @@ int process_cmd_data_alloc(struct bf_openmp_cmd *cmd)
 	bf_send_buf(conn, &ptr, sizeof(void *));
 
 	DOCA_LOG_INFO("[EXP] CMD_DATA_ALLOC(%d) %ld bytes - 0x%09x", cmd->cmd, cmd->data.sz, (size_t)ptr);
-	//printf("[EXP] CMD_DATA_ALLOC(%d) %ld bytes - 0x%09x\n", cmd->cmd, cmd->data.sz, (size_t)ptr);
 
 	return 0;
 }
@@ -249,7 +242,6 @@ int process_cmd_data_submit(struct bf_openmp_cmd *cmd)
 
 	struct bf_conn *conn = &dev_list[0].conn;
 	DOCA_LOG_INFO("[EXP] CMD_DATA_SUBMIT(%d) %ld bytes - 0x%09x (%ld)", cmd->cmd, cmd->data.sz, cmd->data.ptr, cmd->data.ptr);
-	//printf("[EXP] CMD_DATA_SUBMIT(%d) %ld bytes - 0x%09x (%ld)\n", cmd->cmd, cmd->data.sz, cmd->data.ptr, cmd->data.ptr);
 
 	bf_recv_buf(conn, (void *)cmd->data.ptr, cmd->data.sz);
 
@@ -266,7 +258,6 @@ int process_cmd_data_retrieve(struct bf_openmp_cmd *cmd)
 	bf_send_buf(conn, (void *)cmd->data.ptr, cmd->data.sz);
 
 	DOCA_LOG_INFO("[EXP] CMD_DATA_RETRIEVE(%d) %ld bytes - 0x%09x", cmd->cmd, cmd->data.sz, cmd->data.ptr);
-	//printf("[EXP] CMD_DATA_RETRIEVE(%d) %ld bytes - 0x%09x\n", cmd->cmd, cmd->data.sz, cmd->data.ptr);
 
 
 	return 0;
@@ -292,7 +283,6 @@ int process_cmd_load_binary(struct bf_openmp_cmd *cmd)
 	struct bf_conn *conn = &dev_list[0].conn;
 
 	DOCA_LOG_INFO("CMD_LOAD_BINARY(%d) %ld bytes %ld entries", cmd->cmd, cmd->load.imglen, cmd->load.total_entries);
-	//DOCA_LOG_CRIT("CMD_LOAD_BINARY(%d) %ld bytes %ld entries", cmd->cmd, cmd->load.imglen, cmd->load.total_entries);
 
 	lib->imglen =        cmd->load.imglen;
 	lib->img    = malloc(cmd->load.imglen);
@@ -318,7 +308,6 @@ int process_cmd_load_binary(struct bf_openmp_cmd *cmd)
 	//dlclose(hndl);
 
 	for (i = 0; i < cmd->load.total_entries; ++i) {
-		//bf_recv(conn, sym, &msglen);
 		bf_recv_buf(conn, conn->rbuf, __MAX_SZ__);
 		sscanf(conn->rbuf, _DEM_ "%s\r\n" _DEM_, sym);
 		symaddr = dlsym(lib->hndl, sym);
@@ -327,7 +316,7 @@ int process_cmd_load_binary(struct bf_openmp_cmd *cmd)
 		}
 		msglen = sprintf(conn->sbuf, _DEM_ "%ld" _DEM_, (size_t)symaddr);
 		bf_send_buf(conn, conn->sbuf, __MAX_SZ__);
-		//bf_send_buf(conn, symaddr, sizeof(void *));
+
 		DOCA_LOG_INFO("%d. symaddr for %s: 0x%09x (%ld)\n", i, sym, (size_t)symaddr, (size_t)symaddr);
 	}
 
@@ -612,10 +601,6 @@ int bf_init_deviceinfo()
 		dev_list[k].info = devinfo;
 		++k;
 	}
-#if 0
-	for (i = 0; i < total_devices; ++i)
-		bf_print_deviceinfo(i);
-#endif
 
 }
 
@@ -833,8 +818,7 @@ int main(int argc, char *argv[])
 {
 	int ret;
 	doca_log_global_level_set(DOCA_LOG_LEVEL_CRIT);
-	//doca_log_global_level_set(DOCA_LOG_LEVEL_INFO); 
-	//doca_log_global_level_set(DOCA_LOG_LEVEL_DEBUG); 
+
 	while (1) {
 		ret = init_server();
 		if (ret == DOCA_SUCCESS) {

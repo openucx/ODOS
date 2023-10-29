@@ -21,7 +21,6 @@
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/sem.h>
-//#include <semaphore.h>
 
 #include <sys/stat.h>
 #include <sys/epoll.h>
@@ -37,12 +36,10 @@ extern "C" {
 #endif
 
 #define _DEM_ "---"
-#define _PROMPT_ "\033[;32mopenmp\033[;0m: "
 
 #define SERVER_NAME "omp_test0"
 #define   SEMA_NAME "omp_test_sema14"
-#define SEMA_PATH "/global/home/users/uthmanhere/tmp/omp_sema_lock"
-#define __BF_DEBUG__ 0
+#define SEMA_PATH "/var/tmp/omp_sema_lock"
 
 #define __MAX_SZ__ 2048
 #define __ACK_RESET__ 65536
@@ -53,59 +50,7 @@ double timespec_diff(struct timespec *timeA_p, struct timespec *timeB_p)
 	return (((double)timeA_p->tv_sec ) + ((double)timeA_p->tv_nsec/1000000000)) -
 		((double)(timeB_p->tv_sec ) + (double)timeB_p->tv_nsec/1000000000);
 }
-void hex_dump(const void * addr, const int len, int perLine)
-{
-#if __BF_DEBUG__
-    // Silently ignore silly per-line values.
-    if (perLine < 4 || perLine > 64) perLine = 16;
 
-    int i;
-    unsigned char buff[perLine+1];
-    const unsigned char * pc = (const unsigned char *)addr;
-
-    // Length checks.
-    if (len == 0) {
-        printf("  ZERO LENGTH\n");
-        return;
-    }
-    if (len < 0) {
-        printf("  NEGATIVE LENGTH: %d\n", len);
-        return;
-    }
-
-    // Process every byte in the data.
-    for (i = 0; i < len; i++) {
-        // Multiple of perLine means new or first line (with line offset).
-        if ((i % perLine) == 0) {
-            // Only print previous-line ASCII buffer for lines beyond first.
-            if (i != 0) printf ("  %s\n", buff);
-            // Output the offset of current line.
-            printf ("  %04x ", i);
-        }
-
-        // Now the hex code for the specific character.
-
-        printf (" %02x", pc[i]);
-
-        // And buffer a printable ASCII character for later.
-        if ((pc[i] < 0x20) || (pc[i] > 0x7e)) // isprint() may be better.
-            buff[i % perLine] = '.';
-        else
-            buff[i % perLine] = pc[i];
-        buff[(i % perLine) + 1] = '\0';
-    }
-
-    // Pad out last line if not exactly perLine characters.
-    while ((i % perLine) != 0) {
-        printf ("   ");
-        i++;
-    }
-
-    // And print the final ASCII buffer.
-    printf ("  %s\n", buff);
-#endif
-	return;
-}
 
 enum DEVICE_MODE {
 	SERVER_MODE = 0,
@@ -310,19 +255,9 @@ int bf_send_buf(struct bf_conn *conn, void *buf, size_t sz)
 		}
 		if (ack_reset > __ACK_RESET__) {
 			bf_recv_buf(conn, conn->rbuf, __MAX_SZ__);
-			//printf("ack after %ld bytes\n", sent_len);
+			//DOCA_LOG_DBG("ack after %ld bytes\n", sent_len);
 			ack_reset = 0;
 		}
-#if 0
-		while (1) {
-
-#define __MAX_SZ__ 4080
-			ret = epoll_wait(conn->epoll_fd,  &conn->send_event, 1, 100);
-			if (ret != 0) {
-				break;
-			}
-		}
-#endif
 		ack_reset += len;
 		sent_len += len;
 	}
@@ -549,9 +484,7 @@ int32_t __tgt_rtl_init_plugin()
 	profiler.total_retrieves     = 0;
 	profiler.total_kernel_runs   = 0;
 
-	//doca_log_global_level_set(DOCA_LOG_LEVEL_CRIT);
-	//doca_log_global_level_set(DOCA_LOG_LEVEL_INFO);
-	doca_log_global_level_set(DOCA_LOG_LEVEL_DEBUG);
+	doca_log_global_level_set(DOCA_LOG_LEVEL_CRIT);
 	
 	DOCA_LOG_INFO("load plugin");
 
@@ -568,23 +501,10 @@ int32_t __tgt_rtl_init_plugin()
 
 		ret = doca_dma_job_get_supported(doca_dev_list[i], DOCA_DMA_JOB_MEMCPY);
 		if (ret != DOCA_SUCCESS) {
-			//puts("dma not supported.");
+			//DOCA_LOG_ERR("dma not supported.");
 			continue;
-		}
-#if 0
-		ret = doca_devinfo_rep_get_is_list_all_supported(
-			dev_list[i], &devinfo.rep_support);
-		if (ret != DOCA_SUCCESS) {
-			puts("devinfo get failed.");
-			return;
 		}
 
-		if (devinfo.rep_support == 0) {
-			puts("rep support: yes");
-			continue;
-		}
-		puts("rep support: no");
-#endif
 		++total_devices;
 
 	}
@@ -599,7 +519,7 @@ int32_t __tgt_rtl_init_plugin()
 
 		ret = doca_dma_job_get_supported(doca_dev_list[i], DOCA_DMA_JOB_MEMCPY);
 		if (ret != DOCA_SUCCESS) {
-			//puts("dma not supported.");
+			//DOCA_LOG_ERR("dma not supported.");
 			continue;
 		}
 
@@ -859,84 +779,6 @@ int32_t __tgt_rtl_init_device(int32_t ID)
 		return OFFLOAD_FAIL;
 	}
 
-#if 0
-
-	struct bf_conn *conn    = &dev_list[0].conn;
-	struct bf_conn *server_conn    = &dev_list[0].server_conn;
-	struct bf_openmp_cmd cmd = {
-		.cmd = CMD_INIT_DEVICE
-	};
-
-	bf_send_buf(server_conn, &cmd, sizeof(cmd));
-	bf_recv_buf(server_conn, new_server_name, __MAX_SZ__);
-	printf("server name: %s\n", new_server_name);
-	ret = bf_init_connection(0, CLIENT_MODE, new_server_name, conn);
-	if (ret != OFFLOAD_SUCCESS) {
-		DOCA_LOG_ERR("failed to initialize conneciton");
-		return OFFLOAD_FAIL;
-	}
-#endif
-#if 0
-	int ret;
-	struct bf_info devinfo = dev_list[ID].info;
-	struct bf_conn *conn    = &dev_list[ID].conn;
-	struct doca_dev *doca_dev = devinfo.doca_dev;
-
-	ret = doca_dev_open(doca_dev_list[devinfo.doca_id], &doca_dev);
-	if (ret != DOCA_SUCCESS) {
-		DOCA_LOG_ERR("failed open dev.");
-		return OFFLOAD_FAIL;
-	}
-	if (doca_dev == NULL) {
-		DOCA_LOG_ERR("failed open dev (null).");
-		return OFFLOAD_FAIL;
-	}
-	DOCA_LOG_DBG("opened device");
-	ret = doca_comm_channel_ep_create(&conn->ep);
-	if (ret != DOCA_SUCCESS) {
-		DOCA_LOG_ERR("failed to create ep");
-		return OFFLOAD_FAIL;
-	}
-	DOCA_LOG_DBG("created ep");
-	ret = doca_comm_channel_ep_set_device(conn->ep, doca_dev);
-	if (ret != DOCA_SUCCESS) {
-		DOCA_LOG_ERR("failed to create ep");
-		return OFFLOAD_FAIL;
-	}
-	DOCA_LOG_DBG("going to connect....");
-	ret = doca_comm_channel_ep_connect(conn->ep, SERVER_NAME, &conn->peer);
-	if (ret != DOCA_SUCCESS) {
-		DOCA_LOG_ERR("host failed to connect :(");
-		return OFFLOAD_FAIL;
-	}
-	DOCA_LOG_INFO("connected");
-
-	while (
-		doca_comm_channel_peer_addr_update_info(conn->peer) \
-			== DOCA_ERROR_CONNECTION_INPROGRESS
-	);
-	DOCA_LOG_DBG("updated peer addr info");
-
-	conn->epoll_fd = epoll_create1(0);
-
-	doca_comm_channel_ep_get_event_channel(conn->ep, &conn->send_fd, &conn->recv_fd);
-
-	conn->recv_event.events  = EPOLLIN;
-	conn->recv_event.data.fd = conn->recv_fd;
-
-	ret = epoll_ctl(conn->epoll_fd, EPOLL_CTL_ADD, conn->recv_fd, &conn->recv_event);
-	if (ret == -1) {
-		DOCA_LOG_ERR("epoll failed.");
-		return OFFLOAD_FAIL;
-	}
-	ret = epoll_ctl(conn->epoll_fd, EPOLL_CTL_ADD, conn->send_fd, &conn->send_event);
-	if (ret == -1) {
-		DOCA_LOG_ERR("epoll failed.");
-		return OFFLOAD_FAIL;
-	}
-
-	conn->lock = PTHREAD_MUTEX_INITIALIZER;
-#endif
 	profiler.init_plugin = clock() - start_;
 	return OFFLOAD_SUCCESS;
 }
@@ -1089,16 +931,7 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t ID,
 	++total_target_tables;
 
 	return &lib->target_table[total_target_tables - 1];
-#if 0
-	__tgt_target_table table_entry;
 
-	table_entry = {
-		.EntriesBegin = Image->EntriesBegin,
-		.EntriesEnd   = Image->EntriesEnd
-	};
-	target_table_[0] = table_entry;
-	return target_table_;
-#endif
 }
 
 
