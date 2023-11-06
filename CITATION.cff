@@ -1,0 +1,56 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: ODOS (OpenMP DOCA Offloading Support)
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - name: Barcelona Supercomputing Center
+    address: 'Plaça Eusebi Güell, 1-3'
+    city: Barcelona
+    country: ES
+    post-code: 08034
+    website: 'http://www.bsc.es'
+  - given-names: Muhammad
+    family-names: Usman
+    email: muhammad.usman@bsc.es
+    affiliation: BSC
+  - given-names: Sergio
+    family-names: Iserte
+    email: sergio.iserte@bsc.es
+    affiliation: BSC
+    orcid: 'https://orcid.org/0000-0003-3654-7924'
+  - given-names: Antonio J.
+    family-names: Peña
+    email: antonio.pena@bsc.es
+    affiliation: BSC
+    orcid: 'https://orcid.org/0000-0002-3575-4617'
+repository-code: 'https://gitlab.bsc.es/musman/llvm-project-bf'
+url: 'http://www.bsc.es/'
+repository: >-
+  https://www.bsc.es/discover-bsc/organisation/scientific-structure/accelerators-and-communications-hpc/team-software
+abstract: >-
+  Data processing units (DPUs) as network co-processors are
+  an emerging trend in our community, with plenty of
+  opportunities yet to be explored. These have been
+  generally used as domain-specific accelerators transparent
+  to application developers; In the HPC field, DPUs have
+  been used as MPI accelerators, but also to offload some
+  tasks from the general-purpose processor. However, the
+  latter required application developers to deploy MPI ranks
+  in the DPUs, as if they were remote (weak) compute nodes,
+  hence considerably hindering programmability. The wide
+  adoption of OpenMP as the threading model in the HPC
+  arena, along with that of GPU accelerators, is making
+  OpenMP offloading to GPUs a wide trend for HPC
+  applications. In this paper we introduce, for the first
+  time in the literature, OpenMP offloading support for
+  network co-processor DPUs. We present our design in LLVM
+  to support OpenMP standard offloading semantics and
+  discuss the programming productivity advantages with
+  respect to the existing MPI-based programming model.
+license: Apache-2.0
+
