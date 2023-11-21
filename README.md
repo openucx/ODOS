@@ -8,7 +8,7 @@ export BUILDDIR=/path/to/build/dir/
 2. Compile LLVM
 ```
 cmake -S llvm-project/llvm                          \
-      -B llvm_objdir                                \
+      -B $BUILDDIR                                  \
       -DCMAKE_INSTALL_PREFIX="$PREFIX"              \
       -DCMAKE_BUILD_TYPE=Release                    \
       -DCMAKE_C_COMPILER="`which clang`"            \
@@ -18,7 +18,7 @@ cmake -S llvm-project/llvm                          \
       -DLLVM_ENABLE_PROJECTS="clang"                \
       -DGCC_INSTALL_PREFIX="/usr"                   \
       -DCLANG_ENABLE_ARCMT=OFF                      \
-      -DCLANG_ENABLE_STATIC_ANALYZER=OF
+      -DCLANG_ENABLE_STATIC_ANALYZER=OFF
 
 cd $BUILDDIR && make -j install
 ```
@@ -71,7 +71,7 @@ clang -fopenmp -fopenmp-targets=aarch64-unknown-linux ./app.c -o app
 ./app
 ```
 
-Note: please make sure that DOCA libraries are included in LD\_LIBRARY\_PATH
+Note: please make sure that DOCA libraries are included in LD\_LIBRARY\_PATH. This project supportes DOCA v2.0.2
 
 
 #Citation

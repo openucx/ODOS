@@ -1,6 +1,6 @@
 ##===----------------------------------------------------------------------===##
 #
-# Build a plugin for a NEC Aurora machine if available. (Can also run on host)
+# Build a plugin for BlueField DPUs
 #
 ##===----------------------------------------------------------------------===##
 
