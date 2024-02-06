@@ -34,6 +34,7 @@ static const char *RTLNames[] = {
     /* PowerPC target       */ "libomptarget.rtl.ppc64",
     /* x86_64 target        */ "libomptarget.rtl.x86_64",
     /* CUDA target          */ "libomptarget.rtl.cuda",
+    /* BlueField target     */ "libomptarget.rtl.bf",
     /* AArch64 target       */ "libomptarget.rtl.aarch64",
     /* AMDGPU target        */ "libomptarget.rtl.amdgpu",
 };
