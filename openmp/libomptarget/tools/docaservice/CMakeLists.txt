@@ -43,14 +43,13 @@ message( STATUS "doca libraries path: ${DOCA_LIBPATH}" )
 
 find_file(DocaInc doca_dev.h        PATHS ${DOCA_INCPATH} NO_DEFAULT_PATH)
 if(NOT DocaInc)
-	message( FATAL_ERROR "failed to find doca headers in ${DOCA_INCPATH}")
+  message( FATAL_ERROR "failed to find doca headers in ${DOCA_INCPATH}")
 endif()
 
 find_file(DocaLib libdoca_common.so PATHS ${DOCA_LIBPATH} NO_DEFAULT_PATH)
 if(NOT DocaLib)
-	message( FATAL_ERROR "failed to find doca libraries in ${DOCA_LIBPATH}")
+  message( FATAL_ERROR "failed to find doca libraries in ${DOCA_LIBPATH}")
 endif()
-
 
 
 project(docaservice)
@@ -62,24 +61,17 @@ set(CMAKE_C_FLAGS "-O1 -ldl -fopenmp")
 
 add_definitions(-w)
 
-add_executable(
-	doca-omp-service
-	doca-omp-service.c
-)
+add_executable(doca-omp-service doca-omp-service.c)
 
-target_include_directories(
-	doca-omp-service PRIVATE
-	${DOCA_INCPATH}
-)
-
+target_include_directories(doca-omp-service PRIVATE ${DOCA_INCPATH})
 
 
 target_link_libraries(
-	doca-omp-service PRIVATE
-	elf
-	ffi
-	pthread
-	${DOCA_LIBPATH}/libdoca_dma.so
-	${DOCA_LIBPATH}/libdoca_common.so
-	${DOCA_LIBPATH}/libdoca_comm_channel.so
+  doca-omp-service PRIVATE
+  elf
+  ffi
+  pthread
+  ${DOCA_LIBPATH}/libdoca_dma.so
+  ${DOCA_LIBPATH}/libdoca_common.so
+  ${DOCA_LIBPATH}/libdoca_comm_channel.so
 )

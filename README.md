@@ -46,7 +46,8 @@ cmake -S llvm-project/openmp                        \
       -DLIBOMPTARGET_ENABLE_DEBUG=OFF               \
       -DLLVM_BUILD_TOOLS=ON                         \
       -DLLVM_ENABLE_RUNTIMES=openmp                 \
-      -DDOCA_PATH=/path/to/tools/doca/2.0.2/opt/mellanox/doca
+      -DDOCA_INCPATH=/path/to/doca/include          \
+      -DDOCA_LIBPATH=/path/to/doca/libs
 
 cd $BUILDDIR && make -j install
 ```
