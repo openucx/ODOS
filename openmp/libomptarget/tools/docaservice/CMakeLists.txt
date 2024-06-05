@@ -33,18 +33,23 @@
 #)
 
 
-cmake_minimum_required(VERSION 3.0.0)
+cmake_minimum_required(VERSION 3.20.0)
 
-EXECUTE_PROCESS( COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE ARCH )
-message( STATUS "Architecture: ${ARCH}" )
-if( ${ARCH} STREQUAL "x86_64" )
-	set(DOCA_PATH "/global/software/rocky-9.x86_64/modules/tools/doca/2.0.2/opt/mellanox/doca")
-else()
-	set(DOCA_PATH "/opt/mellanox/doca")
+set(DOCA_INCPATH "/opt/mellanox/doca/include" CACHE STRING "path to doca header files")
+set(DOCA_LIBPATH "/opt/mellanox/doca/lib/aarch64-linux-gnu" CACHE STRING "path to doca libraries")
+
+message( STATUS "doca   headers path: ${DOCA_INCPATH}" )
+message( STATUS "doca libraries path: ${DOCA_LIBPATH}" )
+
+find_file(DocaInc doca_dev.h        PATHS ${DOCA_INCPATH} NO_DEFAULT_PATH)
+if(NOT DocaInc)
+	message( FATAL_ERROR "failed to find doca headers in ${DOCA_INCPATH}")
 endif()
-message( STATUS "DOCA: ${DOCA_PATH}" )
 
-
+find_file(DocaLib libdoca_common.so PATHS ${DOCA_LIBPATH} NO_DEFAULT_PATH)
+if(NOT DocaLib)
+	message( FATAL_ERROR "failed to find doca libraries in ${DOCA_LIBPATH}")
+endif()
 
 
 
@@ -64,15 +69,17 @@ add_executable(
 
 target_include_directories(
 	doca-omp-service PRIVATE
-	${DOCA_PATH}/include
+	${DOCA_INCPATH}
 )
+
+
 
 target_link_libraries(
 	doca-omp-service PRIVATE
 	elf
 	ffi
 	pthread
-	${DOCA_PATH}/lib/aarch64-linux-gnu/libdoca_dma.so
-	${DOCA_PATH}/lib/aarch64-linux-gnu/libdoca_common.so
-	${DOCA_PATH}/lib/aarch64-linux-gnu/libdoca_comm_channel.so
+	${DOCA_LIBPATH}/libdoca_dma.so
+	${DOCA_LIBPATH}/libdoca_common.so
+	${DOCA_LIBPATH}/libdoca_comm_channel.so
 )

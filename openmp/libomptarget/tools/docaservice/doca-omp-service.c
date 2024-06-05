@@ -138,6 +138,7 @@ struct bf_dev {
 static int total_devices;
 static struct bf_dev *dev_list;
 static struct doca_devinfo **doca_dev_list;
+static struct doca_log_backend *sdk_log;
 
 
 int bf_send_buf(struct bf_conn *conn, void *buf, size_t sz);
@@ -414,7 +415,9 @@ int process_cmd_run_target_region(struct bf_openmp_cmd *cmd)
 
 int process_cmd_set_info_flag(struct bf_openmp_cmd *cmd)
 {
-	doca_log_global_level_set(DOCA_LOG_LEVEL_INFO);
+	//doca_log_global_level_set(DOCA_LOG_LEVEL_INFO);
+	doca_log_backend_set_sdk_level(sdk_log, DOCA_LOG_LEVEL_INFO);
+
 	return 0;
 }
 
@@ -468,9 +471,9 @@ int bf_init_deviceinfo()
 	struct doca_devinfo_rep ** rep_dev_list;
 
 	total_devices = 0;
-	ret = doca_devinfo_list_create(&doca_dev_list, &tmp_total_devices);
+	ret = doca_devinfo_create_list(&doca_dev_list, &tmp_total_devices);
 	if (ret != DOCA_SUCCESS) {
-		DOCA_LOG_ERR("devinfo_list_create failed.");
+		DOCA_LOG_ERR("devinfo_create_list failed.");
 		return OFFLOAD_FAIL;
 	}
 
@@ -478,7 +481,8 @@ int bf_init_deviceinfo()
 	for (i = 0; i < tmp_total_devices; ++i) {
 		memset((void*)&devinfo, 0, sizeof(devinfo));
 
-		ret = doca_dma_job_get_supported(doca_dev_list[i], DOCA_DMA_JOB_MEMCPY);
+		ret = doca_dma_cap_task_memcpy_is_supported(doca_dev_list[i]);
+
 		if (ret != DOCA_SUCCESS) {
 			DOCA_LOG_DBG("dma not supported.");
 			continue;
@@ -509,7 +513,7 @@ int bf_init_deviceinfo()
 	for (i = 0, k = 0; i < tmp_total_devices; ++i) {
 		memset((void*)&devinfo, 0, sizeof(devinfo));
 
-		ret = doca_dma_job_get_supported(doca_dev_list[i], DOCA_DMA_JOB_MEMCPY);
+		ret = doca_dma_cap_task_memcpy_is_supported(doca_dev_list[i]);
 		if (ret != DOCA_SUCCESS) {
 			DOCA_LOG_DBG("dma not supported.");
 			continue;
@@ -560,14 +564,13 @@ int bf_init_deviceinfo()
 			DOCA_LOG_ERR("devinfo get failed [mmap].");
 			return OFFLOAD_FAIL;
 		}
-#endif
 		ret = doca_devinfo_rep_get_is_list_all_supported(
 			doca_dev_list[i], &devinfo.rep_support);
 		if (ret != DOCA_SUCCESS) {
 			DOCA_LOG_ERR("devinfo get failed [rep support].");
 			return OFFLOAD_FAIL;
 		}
-
+#endif
 		ret = doca_comm_channel_get_max_message_size(
 			doca_dev_list[i], &devinfo.cc.max_msg_size);
 		if (ret != DOCA_SUCCESS) {
@@ -601,13 +604,14 @@ int bf_init_deviceinfo()
 			DOCA_LOG_ERR("dev open failed.");
 			return OFFLOAD_FAIL;
 		}
-		ret = doca_devinfo_rep_list_create(
-			dev, DOCA_DEV_REP_FILTER_NET, &rep_dev_list, &devinfo.total_rep_devices
+		ret = doca_devinfo_rep_create_list(
+			dev, DOCA_DEVINFO_REP_FILTER_NET, &rep_dev_list, &devinfo.total_rep_devices
 		);
 		if (ret != DOCA_SUCCESS) {
-			DOCA_LOG_ERR("devinfo_rep_list_create failed.");
+			DOCA_LOG_ERR("devinfo_rep_create_list failed.");
 			return OFFLOAD_FAIL;
 		}
+#if 0
 		devinfo.rep = (struct rep_devinfo *)malloc(devinfo.total_rep_devices * sizeof(struct rep_devinfo));
 		for (j = 0; j < devinfo.total_rep_devices; ++j) {
 			ret = doca_devinfo_rep_get_is_list_all_supported(
@@ -616,7 +620,6 @@ int bf_init_deviceinfo()
 				DOCA_LOG_ERR("devinfo failed [rep support]");
 				return OFFLOAD_FAIL;
 			}
-#if 0
 			ret = doca_devinfo_rep_get_vuid(
 				rep_dev_list[j], devinfo.rep[j].vuid, DOCA_DEVINFO_VUIiD_SIZE);
 			if (ret != DOCA_SUCCESS) {
@@ -629,14 +632,17 @@ int bf_init_deviceinfo()
 				DOCA_LOG_ERR("devinfo failed [rep pci]");
 				return;
 			}
-#endif
 		}
-		doca_devinfo_rep_list_destroy(rep_dev_list);
+#endif
+		doca_devinfo_rep_destroy_list(rep_dev_list);
 		doca_dev_close(dev);
 		dev_list[k].info = devinfo;
 		++k;
 	}
 
+	if (total_devices == 0)
+		return OFFLOAD_FAIL;
+	return OFFLOAD_SUCCESS;
 }
 
 void bf_deinit_deviceinfo()
@@ -646,7 +652,7 @@ void bf_deinit_deviceinfo()
 		free(dev_list[j].info.rep);
 	}
 	free(dev_list);
-	doca_devinfo_list_destroy(doca_dev_list);
+	doca_devinfo_destroy_list(doca_dev_list);
 
 }
 
@@ -747,8 +753,8 @@ int bf_init_device(int id, char type, const char *server_name)
 	if (type == SERVER_MODE) {
 		rep_dev = &devinfo->rep[0].rep_dev;
 
-		ret = doca_devinfo_rep_list_create( \
-			*doca_dev, DOCA_DEV_REP_FILTER_NET, &rep_dev_list, &total_rep_devices
+		ret = doca_devinfo_rep_create_list( \
+			*doca_dev, DOCA_DEVINFO_REP_FILTER_NET, &rep_dev_list, &total_rep_devices
 		);
 		DOCA_LOG_INFO("total rep devices: %d\n", total_rep_devices);
 
@@ -760,7 +766,7 @@ int bf_init_device(int id, char type, const char *server_name)
 		}
 		//doca_devinfo_rep_get_pci_addr(rep_dev_list[0], &rep_pci_bdf);
 		//DOCA_LOG_DBG("opened rep device: %02X:%02X:%X\n", rep_pci_bdf.bus, rep_pci_bdf.device, rep_pci_bdf.function);
-		doca_devinfo_rep_list_destroy(rep_dev_list);
+		doca_devinfo_rep_destroy_list(rep_dev_list);
 	}
 
 	DOCA_LOG_DBG("opened device");
@@ -788,6 +794,8 @@ int init_server()
 
 	int ret;
 	ret = bf_init_deviceinfo();
+	if (ret == OFFLOAD_FAIL)
+		return ~DOCA_SUCCESS;
 	ret = bf_init_device(0, SERVER_MODE, SERVER_NAME);
 	if (ret == OFFLOAD_FAIL)
 		return ~DOCA_SUCCESS;
@@ -797,9 +805,11 @@ int init_server()
 
 void deinit_server()
 {
+	if (total_devices == 0)
+		return;
 	bf_deinit_device(0);
 	bf_deinit_deviceinfo();
-	doca_log_global_level_set(DOCA_LOG_LEVEL_CRIT);
+	//doca_log_global_level_set(DOCA_LOG_LEVEL_CRIT);
 	return;
 }
 
@@ -856,14 +866,33 @@ deinit:
 int main(int argc, char *argv[])
 {
 	int ret;
+
 	//doca_log_global_level_set(DOCA_LOG_LEVEL_CRIT);
-	doca_log_global_level_set(DOCA_LOG_LEVEL_DEBUG);
+	//doca_log_global_level_set(DOCA_LOG_LEVEL_DEBUG);
+	ret = doca_log_backend_create_standard();
+	if (ret != DOCA_SUCCESS)
+		return EXIT_FAILURE;
+	ret = doca_log_backend_create_with_file_sdk(stdout, &sdk_log);
+	if (ret != DOCA_SUCCESS)
+		return EXIT_FAILURE;
+#if 1
+	ret = doca_log_backend_set_sdk_level(sdk_log, DOCA_LOG_LEVEL_WARNING);
+#else
+	ret = doca_log_backend_set_sdk_level(sdk_log, DOCA_LOG_LEVEL_INFO);
+#endif
+
+	if (ret != DOCA_SUCCESS)
+		return EXIT_FAILURE;
 
 	while (1) {
 		ret = init_server();
 		if (ret == DOCA_SUCCESS) {
 			run_service();
+		} else if (total_devices == 0) {
+			DOCA_LOG_ERR("no doca device found");
+			return EXIT_FAILURE;
 		}
+
 		deinit_server();
 	}
 	return 0;
