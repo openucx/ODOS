@@ -6,6 +6,7 @@
 #include <sys/epoll.h>
 
 #include <doca_dev.h>
+#include <doca_log.h>
 #include <doca_dma.h>
 #include <doca_dpa.h>
 #include <doca_comm_channel.h>
@@ -125,8 +126,9 @@ struct BlueField {
   struct BlueFieldConnection conn;
 
 private:
-  doca_dev *dev;
-  struct doca_dev_rep   *rep_dev;
+  struct doca_dev             *dev;
+  struct doca_dev_rep     *rep_dev;
+  struct doca_log_backend *sdk_log;
 
   int mode;
 };

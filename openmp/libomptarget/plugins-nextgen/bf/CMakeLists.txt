@@ -12,11 +12,11 @@ set(tmachine_name "bf")
 set(tmachine_triple "aarch64-unknown-linux-gnu")
 set(elf_machine_id 183)
 
-set(DOCA_INCPATH "/opt/mellanox/doca/include" CACHE STRING "path to doca header files")
-set(DOCA_LIBPATH "/opt/mellanox/doca/lib/aarch64-linux-gnu" CACHE STRING "path to doca libraries")
+set(DOCA_INCPATH "${CMAKE_SOURCE_DIR}/libomptarget/tools/pdoca/doca/include/" CACHE STRING "path to doca header files")
+set(DOCA_LIBPATH "${CMAKE_SOURCE_DIR}/libomptarget/tools/pdoca/doca/lib/x86_64-linux-gnu" CACHE STRING "path to doca libraries")
 
-message( STATUS "doca   headers path: ${DOCA_INCPATH}" )
-message( STATUS "doca libraries path: ${DOCA_LIBPATH}" )
+libomptarget_say( "doca   headers path: ${DOCA_INCPATH}" )
+libomptarget_say( "doca libraries path: ${DOCA_LIBPATH}" )
 
 find_file(DocaInc doca_dev.h        PATHS ${DOCA_INCPATH} NO_DEFAULT_PATH)
 if(NOT DocaInc)
@@ -29,7 +29,7 @@ if(NOT DocaLib)
 endif()
 
 
-#add_definitions(-w)
+add_definitions(-w)
 # Define macro to be used as prefix of the runtime messages for this target.
 add_definitions("-DTARGET_NAME=bf")
 

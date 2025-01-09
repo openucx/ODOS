@@ -128,7 +128,7 @@ struct DOCADeviceTy : public GenericDeviceTy {
   /// Allocate and construct a DOCA kernel.
   Expected<GenericKernelTy *>
   constructKernelEntry(const __tgt_offload_entry &KernelEntry,
-                       DeviceImageTy &Image) {
+                       DeviceImageTy &Image) override {
     void *Addr = BF.DynLib.getAddressOfSymbol(KernelEntry.name);
 
     // Allocate and create the kernel.
@@ -169,12 +169,14 @@ struct DOCADeviceTy : public GenericDeviceTy {
 
     switch (Kind) {
     case TARGET_ALLOC_DEFAULT:
+      // default and device are same
     case TARGET_ALLOC_DEVICE:
       BF.send_buf(&cmd,      sizeof(cmd   ));
       BF.recv_buf(&MemAlloc, sizeof(size_t));
       break;
     case TARGET_ALLOC_HOST:
       MemAlloc = std::malloc(Size);
+      break;
     case TARGET_ALLOC_SHARED:
       break;
     }
@@ -192,6 +194,7 @@ struct DOCADeviceTy : public GenericDeviceTy {
 
     switch (Kind) {
     case TARGET_ALLOC_DEFAULT:
+      // default and device are same
     case TARGET_ALLOC_DEVICE:
       BF.send_buf(&cmd, sizeof(cmd));
       break;
@@ -403,7 +406,7 @@ struct DOCAPluginTy final : public GenericPluginTy {
   /// Indicate whether data can be exchanged directly between two devices under
   /// this same plugin. If this function returns true, it's safe to call the
   /// GenericDeviceTy::exchangeData() function on the source device.
-  virtual bool isDataExchangable(int32_t SrcDeviceId, int32_t DstDeviceId) {
+  virtual bool isDataExchangable(int32_t SrcDeviceId, int32_t DstDeviceId) override {
     return false;
   }
 

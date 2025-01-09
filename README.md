@@ -52,8 +52,7 @@ cmake -S llvm-project/openmp                        \
 cd $BUILDDIR && make -j install
 ```
 5. Compile the DOCA OpenMP Service within DPU:
-   `llvm-project/openmp/libomptarget/toos/docaservice/`
-
+    `llvm-project/openmp/libomptarget/toos/docaservice/`
 
 # Run
 
@@ -67,10 +66,29 @@ clang -fopenmp -fopenmp-targets=aarch64-unknown-linux ./app.c -o app
 ./app
 ```
 
+# Run with pDOCA
+
+1. Run DOCA OpenMP Service
+```
+LD_PRELOAD=`pwd`/install/lib/libpdoca.so ./install/bin/doca-omp-service
+```
+2. Check devices
+```
+LD_PRELOAD=`pwd`/install/lib/libpdoca.so ./install/bin/llvm-omp-device-info 
+```
+3. Compile application on host
+```
+clang -fopenmp -fopenmp-targets=aarch64-unknown-linux ./app.c -o app
+```
+4. Run
+```
+LD_PRELOAD=`pwd`/install/lib/libpdoca.so ./app
+```
+
 Note: please make sure that DOCA libraries are included in LD\_LIBRARY\_PATH. This project supportes DOCA v2.0.2
 
 
-#Citation
+# Citation
 
 If you find this software useful for your research or project, we kindly request that you cite the following paper:
 
@@ -81,6 +99,6 @@ Please make sure to appropriately acknowledge and cite the original paper in you
 By citing the paper, you contribute to the acknowledgment of the original work and allow others to find the source for further reference. We appreciate your cooperation in citing the paper and hope that it has been valuable to your project or research.
 
 
-#Contact
+# Contact
 
 accelcom@bsc.es
