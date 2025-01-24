@@ -392,7 +392,7 @@ struct DOCAPluginTy final : public GenericPluginTy {
 
   /// Get the ELF code to recognize the binary image of this plugin.
   uint16_t getMagicElfBits() const  override {
-    return ELF::EM_AARCH64;
+    return ELF::EM_X86_64;
   }
 
   Expected<bool> isImageCompatible(__tgt_image_info *Info) const override {
@@ -400,7 +400,7 @@ struct DOCAPluginTy final : public GenericPluginTy {
   }
   /// Get the target triple of this plugin.
   Triple::ArchType getTripleArch() const override {
-    return Triple::aarch64;
+    return Triple::x86_64;
   }
 
   /// Indicate whether data can be exchanged directly between two devices under
