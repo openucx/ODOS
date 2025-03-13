@@ -293,7 +293,7 @@ int bf_recv_buf(struct bf_conn *conn, void *buf, size_t sz)
 	return 0;
 }
 
-int bf_init_connection(int id, char type, const char *server_name, struct bf_conn *conn)
+static int bf_init_connection(int id, char type, const char *server_name, struct bf_conn *conn)
 {
 
 	int ret;
@@ -329,7 +329,7 @@ int bf_init_connection(int id, char type, const char *server_name, struct bf_con
 		DOCA_LOG_INFO("dpu is listening...");
 	} else {
 		DOCA_LOG_INFO("going to connect....");
-		ret = doca_comm_channel_ep_connect(conn->ep, SERVER_NAME, &conn->peer);
+		ret = doca_comm_channel_ep_connect(conn->ep, server_name, &conn->peer);
 		if (ret != DOCA_SUCCESS) {
 			DOCA_LOG_ERR("host failed to connect :(");
 			return OFFLOAD_FAIL;
@@ -362,7 +362,7 @@ int bf_init_connection(int id, char type, const char *server_name, struct bf_con
 	return 0;
 }
 
-int bf_init_device(int id, char type, const char *server_name)
+static int bf_init_device(int id, char type, const char *server_name)
 {
 	DOCA_LOG_INFO("init device");
 
@@ -412,29 +412,6 @@ int bf_init_device(int id, char type, const char *server_name)
 		DOCA_LOG_ERR("failed to initialize conneciton");
 		return OFFLOAD_FAIL;
 	}
-
-	//conn->lock_ = sem_open(SEMA_NAME, O_CREAT, 0666, 1);
-	conn->key_ = ftok(SEMA_PATH, 'a');
-	if (conn->key_ == -1) {
-		DOCA_LOG_ERR("failed to generate semaphore key");
-		printf("failed to generate semaphore key\n");
-		return OFFLOAD_FAIL;
-	}
-	conn->lock_ = semget(conn->key_, 1, 0660 | IPC_CREAT);
-	if (conn->lock_ == -1) {
-		DOCA_LOG_ERR("failed to get semaphore lock");
-		printf("failed to get semaphore lock\n");
-		return OFFLOAD_FAIL;
-	}
-
-	ret = semctl(conn->lock_, 0, SETVAL, 1);
-	if (ret == -1) {
-		DOCA_LOG_ERR("failed to assign initial value to semaphore lock");
-		printf("failed to assign initial value to semaphore lock\n");
-		return OFFLOAD_FAIL;
-	}
-
-
 
 	return OFFLOAD_SUCCESS;
 }
@@ -773,7 +750,7 @@ int32_t __tgt_rtl_init_device(int32_t ID)
 	clock_t start_ = clock();
 	DOCA_LOG_DBG("init device");
 
-	ret = bf_init_device(0, CLIENT_MODE, "omp_test");
+	ret = bf_init_device(0, CLIENT_MODE, SERVER_NAME);
 	if (ret != OFFLOAD_SUCCESS) {
 		DOCA_LOG_ERR("failed ot initialize device");
 		return OFFLOAD_FAIL;
@@ -802,10 +779,9 @@ int32_t __tgt_rtl_deinit_device(int32_t ID)
 	doca_comm_channel_ep_destroy(conn->ep);
 	doca_dev_close(info->doca_dev);
 
-	//sem_close(conn->lock_);
 	//sem_unlink(SEMA_NAME);
 
-	semctl(conn->lock_, 0, IPC_RMID);
+	//semctl(conn->lock_, 0, IPC_RMID);
 
 	DOCA_LOG_INFO("deinit device");
 
@@ -892,7 +868,7 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t ID,
 	};
 
 	//pthread_mutex_lock(&conn->lock);
-	sem_wait_(conn->lock_);
+	//sem_wait_(conn->lock_);
 	ret = bf_send_buf(conn, &cmd, sizeof(cmd));
 	if (ret != DOCA_SUCCESS) {
 		DOCA_LOG_ERR("load binary cmd failed to send.");
@@ -918,7 +894,7 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t ID,
 	}
 
 	//pthread_mutex_unlock(&conn->lock);
-	sem_post_(conn->lock_);
+	//sem_post_(conn->lock_);
 
 	//TODO: not sure if more table entries are required
 	__tgt_target_table table_entry;
@@ -967,10 +943,10 @@ void *__tgt_rtl_data_alloc(int32_t ID, int64_t Size, void *HostPtr,
 		.data.sz = Size
 	};
 
-	sem_wait_(conn->lock_);
+	//sem_wait_(conn->lock_);
 	bf_send_buf(conn, &cmd, sizeof(cmd   ));
 	bf_recv_buf(conn, &ptr, sizeof(void *));
-	sem_post_(conn->lock_);
+	//sem_post_(conn->lock_);
 
 	DOCA_LOG_INFO("data alloc: 0x%09x (%ld)", (size_t)ptr, (size_t)ptr);
 	//printf("data alloc: 0x%09x (%ld)\n", (size_t)ptr, (size_t)ptr);
@@ -1003,11 +979,11 @@ int32_t __tgt_rtl_data_submit(int32_t ID, void *TargetPtr, void *HostPtr,
 	//	   	Size, (unsigned long)HostPtr, (unsigned long)HostPtr, (unsigned long)TargetPtr, (unsigned long)TargetPtr);
 
 	//pthread_mutex_lock(&conn->lock);
-	sem_wait_(conn->lock_);
+	//sem_wait_(conn->lock_);
 	bf_send_buf(conn, &cmd, sizeof(cmd));
 	ret = bf_send_buf(conn, HostPtr, Size);
 	//pthread_mutex_unlock(&conn->lock);
-	sem_post_(conn->lock_);
+	//sem_post_(conn->lock_);
 
 	profiler.data_submit += (clock() - start_);
 	profiler.total_submit_data += Size;
@@ -1042,11 +1018,11 @@ int32_t __tgt_rtl_data_retrieve(int32_t ID, void *HostPtr, void *TargetPtr,
 	DOCA_LOG_INFO("data retrieve: %ld bytes from 0x%09x (%ld)", Size, TargetPtr);
 
 	//pthread_mutex_lock(&conn->lock);
-	sem_wait_(conn->lock_);
+	//sem_wait_(conn->lock_);
 	bf_send_buf(conn, &cmd, sizeof(cmd));
 	bf_recv_buf(conn, HostPtr, Size);
 	//pthread_mutex_unlock(&conn->lock);
-	sem_post_(conn->lock_);
+	//sem_post_(conn->lock_);
 
 	profiler.data_retrieve += (clock() - start_);
 	profiler.total_retrieve_data += Size;
@@ -1096,10 +1072,10 @@ int32_t __tgt_rtl_data_delete(int32_t ID, void *TargetPtr, int32_t Kind)
 	DOCA_LOG_INFO("data delete: 0x%09x (%ld)", (size_t)TargetPtr, (size_t)TargetPtr);
 
 	//pthread_mutex_lock(&conn->lock);
-	sem_wait_(conn->lock_);
+	//sem_wait_(conn->lock_);
 	bf_send_buf(conn, &cmd, sizeof(cmd));
 	//pthread_mutex_unlock(&conn->lock);
-	sem_post_(conn->lock_);
+	//sem_post_(conn->lock_);
 
 	profiler.data_delete += (clock() - start_);
 
@@ -1141,7 +1117,7 @@ int32_t __tgt_rtl_run_target_region(int32_t ID, void *Entry, void **Args,
 	DOCA_LOG_INFO("run target region: entry 0x%09x (%ld)", (size_t)Entry, (size_t)Entry);
 
 	//pthread_mutex_lock(&conn->lock);
-	sem_wait_(conn->lock_);
+	//sem_wait_(conn->lock_);
 	bf_send_buf(conn, &cmd,            sizeof(cmd      ));
 	if (NumArgs) {
 		bf_send_buf(conn, Args,    NumArgs*sizeof(void *   ));
@@ -1149,7 +1125,7 @@ int32_t __tgt_rtl_run_target_region(int32_t ID, void *Entry, void **Args,
 	}
 	bf_recv_buf(conn, conn->rbuf, __MAX_SZ__);
 	//pthread_mutex_unlock(&conn->lock);
-	sem_post_(conn->lock_);
+	//sem_post_(conn->lock_);
 
 	clock_gettime(CLOCK_MONOTONIC, &end_);
 	profiler.run_target += timespec_diff(&end_, &start_);
