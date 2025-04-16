@@ -617,13 +617,13 @@ int bf_init_deviceinfo()
 #if 1
 		devinfo.rep = (struct rep_devinfo *)malloc(devinfo.total_rep_devices * sizeof(struct rep_devinfo));
 		for (j = 0; j < devinfo.total_rep_devices; ++j) {
+			/*
 			ret = doca_devinfo_rep_get_is_list_all_supported(
 				doca_dev_list[i], &devinfo.rep_support);
 			if (ret != DOCA_SUCCESS) {
 				DOCA_LOG_ERR("devinfo failed [rep support]");
 				return OFFLOAD_FAIL;
 			}
-			/*
 			ret = doca_devinfo_rep_get_vuid(
 				rep_dev_list[j], devinfo.rep[j].vuid, DOCA_DEVINFO_VUIiD_SIZE);
 			if (ret != DOCA_SUCCESS) {
